@@ -11,4 +11,23 @@ The library is created using the below two research papers.
 2. [CPT+: Decreasing the time/space complexity of the Compact Prediction Tree](https://pdfs.semanticscholar.org/bd00/0fe7e222b8095c6591291cd7bef18f970ab7.pdf)
 
 
+- How to use the library?
+
+There is no requirement of compiling anything but make sure you have Pandas and tqdm installed in your environment specific versions of which are mentioned in the file requirements.txt.
+
+- Sample code for training and getting predictions.
+
+~~~
+
+model = CPT()
+
+data, target = model.load_files("train.csv","test.csv")
+
+model.train(data)
+
+predictions = model.predict(data,target, k, n)
+
+~~~
+
+
 
