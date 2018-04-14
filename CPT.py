@@ -1,347 +1,353 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
 from PredictionTree import *
 import pandas as pd
-import operator
 from tqdm import tqdm
 
 
-# In[2]:
+class CPT():
 
+    alphabet = None
+    root = None
+    II = None
+    LT = None
 
-def load_files(train_file,test_file):
-    data = []
-    target = []
-    train = pd.read_csv(train_file)
-    test = pd.read_csv(test_file)
-    
-    for index, row in train.iterrows():
-        data.append(row.values)
+    def __init__(self):
+        self.alphabet = set()
+        self.root = PredictionTree()
+        self.II = {}
+        self.LT = {}
+
+    def load_files(self,train_file,test_file = None):
         
-    for index, row in test.iterrows():
-        data.append(row.values)
-        target.append(list(row.values))
+        data = []
+        target = []
         
-    return data, target
+        if train_file is None:
+            return train_file
+        
+        train = pd.read_csv(train_file)
     
-
-
-# In[3]:
-
-
-def train(data):
-    
-    alphabet = set()
-    
-    root = PredictionTree()
-    
-    cursornode = root
-    
-    II = {}
-    
-    LT = {}
-
-    for seqid,row in enumerate(data):
-        for element in row:
-
-            # adding to the Prediction Tree
-
-            if cursornode.hasChild(element)== False:
-                cursornode.addChild(element)
-                cursornode = cursornode.getChild(element)
-
-            else:
-                cursornode = cursornode.getChild(element)
-
-            # Adding to the Inverted Index
-
-            if II.get(element) is None:
-                II[element] = set()
-
-            II[element].add(seqid)
+        for index, row in train.iterrows():
+            data.append(row.values)
             
-            alphabet.add(element)
-
-        LT[seqid] = cursornode
-
-        cursornode = root
-        
-    return root, II, LT, alphabet
-
-
-# In[4]:
-
-
-#data = load_files("train_wide.csv","test_wide.csv")
-
-
-# In[5]:
-
-
-#root, II, LT, alphabet = train(data)
-
-
-# In[6]:
-
-
-def score(counttable,key, length, target_size, number_of_similar_sequences, number_items_counttable):
-    weight_level = 1/number_of_similar_sequences
-    weight_distance = 1/number_items_counttable
-    score = 1 + weight_level + weight_distance* 0.001
-    
-    if counttable.get(key) is None:
-        counttable[key] = score
-    else:
-        counttable[key] = score * counttable.get(key)
-        
-    return counttable
-
-
-# In[7]:
-
-
-def predict(target,data, II, LT, alphabet, k, n): 
-    """
-    Here target is the test dataset in the form of list of list,
-    k is the number of last elements that will be used to find similar sequences and,
-    n is the number of predictions required.
-    """
-    
-    predictions = []
-    
-    for each_target in tqdm(target):
-        each_target = each_target[-k:]
-        
-        intersection = set(range(0,len(data)))
-        
-        for element in each_target:
-            if II.get(element) is None:
-                continue
-            intersection = intersection & II.get(element)
-        
-        similar_sequences = []
-        
-        for element in intersection:
-            currentnode = LT.get(element)
-            tmp = []
-            while currentnode.Item is not None:
-                tmp.append(currentnode.Item)
-                currentnode = currentnode.Parent
-            similar_sequences.append(tmp)
+        if test_file is not None:
             
-        for sequence in similar_sequences:
-            sequence.reverse()
+            test = pd.read_csv(test_file)
             
-        counttable = {}
+            for index, row in test.iterrows():
+                data.append(row.values)
+                target.append(list(row.values))
+                
+            return data, target
+        
+        return data
+        
 
-        for  sequence in similar_sequences:
-            try:
-                index = next(i for i,v in zip(range(len(sequence)-1, 0, -1), reversed(sequence)) if v == each_target[-1])
-            except:
-                index = None
-            if index is not None:
-                count = 1
-                for element in sequence[index+1:]:
-                    if element in each_target:
-                        continue
+
+    # In[3]:
+
+
+    def train(self, data):
+        
+        cursornode = self.root
+        
+
+        for seqid,row in enumerate(data):
+            for element in row:
+
+                # adding to the Prediction Tree
+
+                if cursornode.hasChild(element)== False:
+                    cursornode.addChild(element)
+                    cursornode = cursornode.getChild(element)
+
+                else:
+                    cursornode = cursornode.getChild(element)
+
+                # Adding to the Inverted Index
+
+                if self.II.get(element) is None:
+                    self.II[element] = set()
+
+                self.II[element].add(seqid)
+                
+                self.alphabet.add(element)
+
+            self.LT[seqid] = cursornode
+
+            cursornode = self.root
+            
+        return True
+
+
+    # In[4]:
+
+
+    #data = load_files("train_wide.csv","test_wide.csv")
+
+
+    # In[5]:
+
+
+    #root, II, LT, alphabet = train(data)
+
+
+    # In[6]:
+
+
+    def score(self, counttable,key, length, target_size, number_of_similar_sequences, number_items_counttable):
+        weight_level = 1/number_of_similar_sequences
+        weight_distance = 1/number_items_counttable
+        score = 1 + weight_level + weight_distance* 0.001
+        
+        if counttable.get(key) is None:
+            counttable[key] = score
+        else:
+            counttable[key] = score * counttable.get(key)
+            
+        return counttable
+
+
+    # In[7]:
+
+
+    def predict(self,data,target,k, n): 
+        """
+        Here target is the test dataset in the form of list of list,
+        k is the number of last elements that will be used to find similar sequences and,
+        n is the number of predictions required.
+        """
+        
+        predictions = []
+        
+        for each_target in tqdm(target):
+            each_target = each_target[-k:]
+            
+            intersection = set(range(0,len(data)))
+            
+            for element in each_target:
+                if self.II.get(element) is None:
+                    continue
+                intersection = intersection & self.II.get(element)
+            
+            similar_sequences = []
+            
+            for element in intersection:
+                currentnode = self.LT.get(element)
+                tmp = []
+                while currentnode.Item is not None:
+                    tmp.append(currentnode.Item)
+                    currentnode = currentnode.Parent
+                similar_sequences.append(tmp)
+                
+            for sequence in similar_sequences:
+                sequence.reverse()
+                
+            counttable = {}
+
+            for  sequence in similar_sequences:
+                try:
+                    index = next(i for i,v in zip(range(len(sequence)-1, 0, -1), reversed(sequence)) if v == each_target[-1])
+                except:
+                    index = None
+                if index is not None:
+                    count = 1
+                    for element in sequence[index+1:]:
+                        if element in each_target:
+                            continue
+                            
+                        counttable = self.score(counttable,element,len(each_target),len(each_target),len(similar_sequences),count)
+                        count+=1
                         
-                    counttable = score(counttable,element,len(each_target),len(each_target),len(similar_sequences),count)
-                    count+=1
-                    
-#                     if counttable.get(element) is None:
-#                         support = len(II.get(element))/len(LT)
-#                     else:
-#                         support = counttable.get(element) + len(II.get(element))/len(LT)
+    #                     if counttable.get(element) is None:
+    #                         support = len(II.get(element))/len(LT)
+    #                     else:
+    #                         support = counttable.get(element) + len(II.get(element))/len(LT)
 
-#                     counttable[element] = support
+    #                     counttable[element] = support
 
-        pred = get_n_largest(counttable,n)
-        predictions.append(pred)
+            pred = self.get_n_largest(counttable,n)
+            predictions.append(pred)
 
-    return predictions
+        return predictions
 
 
-# In[8]:
+    # In[8]:
 
 
-def get_n_largest(dictionary,n):
-    largest = sorted(dictionary.items(), key = lambda t: t[1], reverse=True)[:n]
-    return [key for key,_ in largest]
+    def get_n_largest(self,dictionary,n):
+        largest = sorted(dictionary.items(), key = lambda t: t[1], reverse=True)[:n]
+        return [key for key,_ in largest]
 
 
-# In[9]:
+    # In[9]:
 
 
-# test = pd.read_csv("test_wide.csv")
+    # test = pd.read_csv("test_wide.csv")
 
 
-# # In[10]:
+    # # In[10]:
 
 
-# target = []
-# for index, row in test.iterrows():
-#     target.append(list(row.values))
+    # target = []
+    # for index, row in test.iterrows():
+    #     target.append(list(row.values))
 
 
-# # In[11]:
+    # # In[11]:
 
 
-# preds = predict(target,5,3)
+    # preds = predict(target,5,3)
 
 
-# # In[ ]:
+    # # In[ ]:
 
 
-# # n = 5
+    # # n = 5
 
-# # test = pd.read_csv("test_wide.csv")
+    # # test = pd.read_csv("test_wide.csv")
 
 
 
-# # target = list(test.loc[0].values)
+    # # target = list(test.loc[0].values)
 
-# # target = target[-n:]
+    # # target = target[-n:]
 
-# # target
+    # # target
 
-# # intersection = set(range(0,len(data)))
+    # # intersection = set(range(0,len(data)))
 
-# # for element in target:
-# #     if II.get(element) is None:
-# #         continue
-# #     intersection = intersection & II.get(element)
+    # # for element in target:
+    # #     if II.get(element) is None:
+    # #         continue
+    # #     intersection = intersection & II.get(element)
 
-# # intersection
+    # # intersection
 
-# # similar_sequences = []
+    # # similar_sequences = []
 
-# # for element in intersection:
-# #     currentnode = LT.get(element)
-# #     tmp = []
-# #     while currentnode.Item is not None:
-# #         tmp.append(currentnode.Item)
-# #         currentnode = currentnode.Parent
-# #     similar_sequences.append(tmp)
+    # # for element in intersection:
+    # #     currentnode = LT.get(element)
+    # #     tmp = []
+    # #     while currentnode.Item is not None:
+    # #         tmp.append(currentnode.Item)
+    # #         currentnode = currentnode.Parent
+    # #     similar_sequences.append(tmp)
+            
+
+    # # for sequence in similar_sequences:
+    # #     sequence.reverse()
+
+    # # counttable = {}
+
+    # # for  sequence in similar_sequences:
+    # #     index = next(i for i,v in zip(range(len(sequence)-1, 0, -1), reversed(sequence)) if v == target[-1])
+    # #     for element in sequence[index+1:]:
+    # #         if counttable.get(element) is None:
+    # #             support = len(II.get(element))/len(LT)
+    # #         else:
+    # #             support = counttable.get(element) + len(II.get(element))/len(LT)
+                
+    # #         counttable[element] = support
+
+    # # predicted = max(counttable.items(),key =operator.itemgetter(1))[0]
+
+    # # predicted
+
+    # # counttable
+
+
+    # # In[12]:
+
+
+    # final = []
+
+    # for pred in preds:
+    #     if len(pred)==0:
+    #         pred = [24530]*3
+    #     if len(pred)==1:
+    #         pred.append(pred[0]+1)
+    #         pred.append(pred[0]+2)
+    #     if len(pred)==2:
+    #         pred.append(pred[1]+1)
+        
+    #     final.append(pred)
         
 
-# # for sequence in similar_sequences:
-# #     sequence.reverse()
 
-# # counttable = {}
-
-# # for  sequence in similar_sequences:
-# #     index = next(i for i,v in zip(range(len(sequence)-1, 0, -1), reversed(sequence)) if v == target[-1])
-# #     for element in sequence[index+1:]:
-# #         if counttable.get(element) is None:
-# #             support = len(II.get(element))/len(LT)
-# #         else:
-# #             support = counttable.get(element) + len(II.get(element))/len(LT)
-            
-# #         counttable[element] = support
-
-# # predicted = max(counttable.items(),key =operator.itemgetter(1))[0]
-
-# # predicted
-
-# # counttable
+    # # In[14]:
 
 
-# # In[12]:
+    # ext = []
+    # for l in final:
+    #     ext.extend(l)
+        
 
 
-# final = []
-
-# for pred in preds:
-#     if len(pred)==0:
-#         pred = [24530]*3
-#     if len(pred)==1:
-#         pred.append(pred[0]+1)
-#         pred.append(pred[0]+2)
-#     if len(pred)==2:
-#         pred.append(pred[1]+1)
-    
-#     final.append(pred)
-    
+    # # In[16]:
 
 
-# # In[14]:
+    # sample_sub = pd.read_csv("sample_submission.csv")
 
 
-# ext = []
-# for l in final:
-#     ext.extend(l)
-    
+    # # In[19]:
 
 
-# # In[16]:
+    # sample_sub.head()
 
 
-# sample_sub = pd.read_csv("sample_submission.csv")
+    # # In[21]:
 
 
-# # In[19]:
+    # submission = pd.DataFrame({"user_sequence":sample_sub['user_sequence'],"challenge":ext})
 
 
-# sample_sub.head()
+    # # In[23]:
 
 
-# # In[21]:
+    # def replace(x):
+    #     return "CI"+str(x)
 
 
-# submission = pd.DataFrame({"user_sequence":sample_sub['user_sequence'],"challenge":ext})
+    # # In[24]:
 
 
-# # In[23]:
+    # submission['challenge'] = submission['challenge'].apply(replace)
 
 
-# def replace(x):
-#     return "CI"+str(x)
+    # # In[25]:
 
 
-# # In[24]:
+    # submission.head()
 
 
-# submission['challenge'] = submission['challenge'].apply(replace)
+    # # In[26]:
 
 
-# # In[25]:
+    # submission.to_csv("coded.csv", index = False)
 
 
-# submission.head()
+    # # In[ ]:
 
 
-# # In[26]:
+    # thefile = open("predictions.txt","w")
 
 
-# submission.to_csv("coded.csv", index = False)
+    # # In[ ]:
 
 
-# # In[ ]:
+    # for line in final:
+    #     thefile.write(",".join(map(str,line)))
+    #     thefile.write("\n")
 
 
-# thefile = open("predictions.txt","w")
+    # # In[ ]:
 
 
-# # In[ ]:
+    # thefile.close()
 
 
-# for line in final:
-#     thefile.write(",".join(map(str,line)))
-#     thefile.write("\n")
+    # # In[ ]:
 
 
-# # In[ ]:
-
-
-# thefile.close()
-
-
-# # In[ ]:
-
-
-# get_ipython().system('pwd')
+    # get_ipython().system('pwd')
 
