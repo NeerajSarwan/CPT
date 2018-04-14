@@ -8,4 +8,7 @@ The library is created using the below two research papers.
 
 1. [Compact Prediction Tree: A Losless Model for Accurate Sequence Prediction](http://www.philippe-fournier-viger.com/spmf/ADMA2013_Compact_Prediction_tree) 
 
+2. [CPT+: Decreasing the time/space complexity of the Compact Prediction Tree](https://pdfs.semanticscholar.org/bd00/0fe7e222b8095c6591291cd7bef18f970ab7.pdf)
+
+
 
