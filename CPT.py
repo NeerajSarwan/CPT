@@ -127,7 +127,7 @@ class CPT():
 
 
 
-    def predict(self,data,target,k, n): 
+    def predict(self,data,target,k, n=1): 
         """
         Here target is the test dataset in the form of list of list,
         k is the number of last elements that will be used to find similar sequences and,
