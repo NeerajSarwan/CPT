@@ -18,14 +18,17 @@ There is no requirement of compiling anything but make sure you have Pandas and 
 - Sample code for training and getting predictions.
 
 ~~~
+# When inside the CPT folder
+
+from CPT import CPT
 
 model = CPT()
 
-data, target = model.load_files("train.csv","test.csv")
+train, test = model.load_files("./data/train.csv","./data/test.csv", merge = True)
 
 model.train(data)
 
-predictions = model.predict(data,target, k, n)
+predictions = model.predict(train,test, k, n)
 
 ~~~
 
