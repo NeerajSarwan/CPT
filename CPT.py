@@ -16,7 +16,7 @@ class CPT():
         self.II = {}
         self.LT = {}
 
-    def load_files(self,train_file,test_file = None):
+    def load_files(self,train_file,test_file,merge = False):
 
         """
         This function reads in the wide csv file of sequences separated by commas and returns a list of list of those
@@ -30,35 +30,35 @@ class CPT():
 
         """
         
-        data = [] # List of list containing the entire sequence data using which the model will be trained.
-        target = [] # List of list containing the test sequences whose next n items are to be predicted
+        train = [] # List of list containing the entire sequence data using which the model will be trained.
+        test = [] # List of list containing the test sequences whose next n items are to be predicted
         
         if train_file is None:
             return train_file
         
-        train = pd.read_csv(train_file)
+        training = pd.read_csv(train_file)
     
-        for index, row in train.iterrows():
-            data.append(row.values)
+        for index, row in training.iterrows():
+            train.append(row.values)
             
-        if test_file is not None:
-            
-            test = pd.read_csv(test_file)
-            
-            for index, row in test.iterrows():
-                data.append(row.values)
-                target.append(list(row.values))
-                
-            return data, target
+        if test_file is None:
+            return test_file
+
+        testing = pd.read_csv(test_file)
         
-        return data
+        for index, row in testing.iterrows():
+            if merge:
+                train.append(row.values)
+            test.append(list(row.values))
+            
+        return train,test
         
 
 
     # In[3]:
 
 
-    def train(self, data):
+    def train(self, train):
 
         """
         This functions populates the Prediction Tree, Inverted Index and LookUp Table for the algorithm.
@@ -71,7 +71,7 @@ class CPT():
         cursornode = self.root
         
 
-        for seqid,row in enumerate(data):
+        for seqid,row in enumerate(train):
             for element in row:
 
                 # adding to the Prediction Tree
@@ -127,7 +127,7 @@ class CPT():
 
 
 
-    def predict(self,data,target,k, n=1): 
+    def predict(self,train,test,k, n=1): 
         """
         Here target is the test dataset in the form of list of list,
         k is the number of last elements that will be used to find similar sequences and,
@@ -140,10 +140,10 @@ class CPT():
         
         predictions = []
         
-        for each_target in tqdm(target):
+        for each_target in tqdm(test):
             each_target = each_target[-k:]
             
-            intersection = set(range(0,len(data)))
+            intersection = set(range(0,len(train)))
             
             for element in each_target:
                 if self.II.get(element) is None:
