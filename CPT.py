@@ -42,14 +42,14 @@ class CPT():
             train.append(row.values)
             
         if test_file is None:
-            return test_file
+            return train, test_file
 
         testing = pd.read_csv(test_file)
         
         for index, row in testing.iterrows():
             if merge:
                 train.append(row.values)
-            test.append(list(row.values))
+            test.append(row.values)
             
         return train,test
         
