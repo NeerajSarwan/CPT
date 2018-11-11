@@ -29,30 +29,30 @@ class CPT():
 
 
         """
-        
+
         train = [] # List of list containing the entire sequence data using which the model will be trained.
         test = [] # List of list containing the test sequences whose next n items are to be predicted
-        
+
         if train_file is None:
             return train_file
-        
+
         training = pd.read_csv(train_file)
-    
+
         for index, row in training.iterrows():
             train.append(row.values)
-            
+
         if test_file is None:
             return train, test_file
 
         testing = pd.read_csv(test_file)
-        
+
         for index, row in testing.iterrows():
             if merge:
                 train.append(row.values)
             test.append(row.values)
-            
+
         return train,test
-        
+
 
 
     # In[3]:
@@ -67,35 +67,33 @@ class CPT():
         Output : Boolean True
 
         """
-        
+
         cursornode = self.root
-        
 
         for seqid,row in enumerate(train):
             for element in row:
-
                 # adding to the Prediction Tree
+                if element==element: #different length sequence support
+                    if cursornode.hasChild(element)== False:
+                        cursornode.addChild(element)
+                        cursornode = cursornode.getChild(element)
 
-                if cursornode.hasChild(element)== False:
-                    cursornode.addChild(element)
-                    cursornode = cursornode.getChild(element)
+                    else:
+                        cursornode = cursornode.getChild(element)
 
-                else:
-                    cursornode = cursornode.getChild(element)
+                    # Adding to the Inverted Index
 
-                # Adding to the Inverted Index
+                    if self.II.get(element) is None:
+                        self.II[element] = set()
 
-                if self.II.get(element) is None:
-                    self.II[element] = set()
+                    self.II[element].add(seqid)
 
-                self.II[element].add(seqid)
-                
-                self.alphabet.add(element)
+                    self.alphabet.add(element)
 
             self.LT[seqid] = cursornode
 
             cursornode = self.root
-            
+
         return True
 
 
@@ -106,7 +104,7 @@ class CPT():
         This function is the main workhorse and calculates the score to be populated against an item. Items are predicted
         using this score.
 
-        Output: Returns a counttable dictionary which stores the score against items. This counttable is specific for a 
+        Output: Returns a counttable dictionary which stores the score against items. This counttable is specific for a
         particular row or a sequence and therefore re-calculated at each prediction.
 
 
@@ -117,17 +115,17 @@ class CPT():
         weight_level = 1/number_of_similar_sequences
         weight_distance = 1/number_items_counttable
         score = 1 + weight_level + weight_distance* 0.001
-        
+
         if counttable.get(key) is None:
             counttable[key] = score
         else:
             counttable[key] = score * counttable.get(key)
-            
+
         return counttable
 
 
 
-    def predict(self,train,test,k, n=1): 
+    def predict(self,train,test,k, n=1):
         """
         Here target is the test dataset in the form of list of list,
         k is the number of last elements that will be used to find similar sequences and,
@@ -137,21 +135,30 @@ class CPT():
 
         Output: max n predictions for each sequence
         """
-        
+
         predictions = []
-        
+
         for each_target in tqdm(test):
-            each_target = each_target[-k:]
-            
+
+            #different size sequence support
+            i=0
+            while i<len(each_target) and each_target[i]==each_target[i]:#find NaN start
+                i=i+1
+            l=i-k-1
+            if l<0:
+                l=0
+
+            each_target = each_target[l:i]
+
             intersection = set(range(0,len(train)))
-            
+
             for element in each_target:
                 if self.II.get(element) is None:
                     continue
                 intersection = intersection & self.II.get(element)
-            
+
             similar_sequences = []
-            
+
             for element in intersection:
                 currentnode = self.LT.get(element)
                 tmp = []
@@ -159,10 +166,10 @@ class CPT():
                     tmp.append(currentnode.Item)
                     currentnode = currentnode.Parent
                 similar_sequences.append(tmp)
-                
+
             for sequence in similar_sequences:
                 sequence.reverse()
-                
+
             counttable = {}
 
             for  sequence in similar_sequences:
@@ -175,7 +182,7 @@ class CPT():
                     for element in sequence[index+1:]:
                         if element in each_target:
                             continue
-                            
+
                         counttable = self.score(counttable,element,len(each_target),len(each_target),len(similar_sequences),count)
                         count+=1
 
@@ -196,5 +203,3 @@ class CPT():
         """
         largest = sorted(dictionary.items(), key = lambda t: t[1], reverse=True)[:n]
         return [key for key,_ in largest]
-
-
